@@ -3,7 +3,6 @@ config.yaml
 
 # Output files
 *.csv
-*.html
 results/
 original_code/
 
