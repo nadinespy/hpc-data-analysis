@@ -1,0 +1,15 @@
+k2472719@erc-hpc-login1:~$ python3 query_job_states.py 
+=== JOB STATES IN DATABASE (Jan 2025) ===
+state_code, count
+3, 385061
+5, 36545
+4, 24609
+6, 5383
+8, 522
+7, 215
+0, 1
+
+To find what each code means, run:
+  sacct -j <job_id> -o JobID,State
+for a job with that state, then compare with the code above.
+

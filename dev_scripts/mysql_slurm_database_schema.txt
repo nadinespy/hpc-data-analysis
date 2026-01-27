@@ -1,0 +1,520 @@
+=== TABLES ===                                                                                                        
+  acct_coord_table                                                                                                                                                                  
+  acct_table                                                                                                                                                                        
+  clus_res_table                                                                                                                                                                    
+  cluster_table                                                                                                                                                                     
+  convert_version_table                                                                                                                                                             
+  create_assoc_table                                                                                                                                                                
+  create_assoc_usage_day_table                                                                                                                                                      
+  create_assoc_usage_hour_table                                                                                                                                                     
+  create_assoc_usage_month_table                                                                                                                                                    
+  create_event_table                                                                                                                                                                
+  create_job_env_table                                                                                                                                                              
+  create_job_script_table                                                                                                                                                           
+  create_job_table                                                                                                                                                                  
+  create_last_ran_table                                                                                                                                                             
+  create_qos_usage_day_table                                                                                                                                                        
+  create_qos_usage_hour_table                                                                                                                                                       
+  create_qos_usage_month_table                                                                                                                                                      
+  create_resv_table                                                                                                                                                                 
+  create_step_table                                                                                                                                                                 
+  create_suspend_table                                                                                                                                                              
+  create_usage_day_table                                                                                                                                                            
+  create_usage_hour_table                                                                                                                                                           
+  create_usage_month_table                                                                                                                                                          
+  create_wckey_table                                                                                                                                                                
+  create_wckey_usage_day_table                                                                                                                                                      
+  create_wckey_usage_hour_table                                                                                                                                                     
+  create_wckey_usage_month_table                                                                                                                                                    
+  federation_table                                                                                                                                                                  
+  qos_table                                                                                                                                                                         
+  res_table                                                                                                                                                                         
+  table_defs_table                                                                                                                                                                  
+  tres_table                                                                                                                                                                        
+  txn_table                                                                                                                                                                         
+  user_table                                                                                                                                                                        
+                                                                                                                                                                                    
+  === acct_coord_table ===                                                                                                                                                          
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  acct                           tinytext                                                                                                                                           
+  user                           tinytext                                                                                                                                           
+                                                                                                                                                                                    
+  === acct_table ===                                                                                                                                                                
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  flags                          int(10) unsigned                                                                                                                                   
+  name                           tinytext                                                                                                                                           
+  description                    text                                                                                                                                               
+  organization                   text                                                                                                                                               
+                                                                                                                                                                                    
+  === clus_res_table ===                                                                                                                                                            
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  cluster                        tinytext                                                                                                                                           
+  res_id                         int(11)                                                                                                                                            
+  allowed                        int(10) unsigned                                                                                                                                   
+                                                                                                                                                                                    
+  === cluster_table ===                                                                                                                                                             
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  name                           tinytext                                                                                                                                           
+  id                             smallint(6)                                                                                                                                        
+  control_host                   tinytext                                                                                                                                           
+  control_port                   int(10) unsigned                                                                                                                                   
+  last_port                      int(10) unsigned                                                                                                                                   
+  rpc_version                    smallint(5) unsigned                                                                                                                               
+  classification                 smallint(5) unsigned                                                                                                                               
+  dimensions                     smallint(5) unsigned                                                                                                                               
+  flags                          int(10) unsigned                                                                                                                                   
+  federation                     tinytext                                                                                                                                           
+  features                       text                                                                                                                                               
+  fed_id                         int(10) unsigned                                                                                                                                   
+  fed_state                      smallint(5) unsigned                                                                                                                               
+                                                                                                                                                                                    
+  === convert_version_table ===                                                                                                                                                     
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  version                        int(11)                                                                                                                                            
+                                                                                                                                                                                    
+  === create_assoc_table ===                                                                                                                                                        
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  comment                        text                                                                                                                                               
+  flags                          int(10) unsigned                                                                                                                                   
+  is_def                         tinyint(4)                                                                                                                                         
+  id_assoc                       int(10) unsigned                                                                                                                                   
+  user                           tinytext                                                                                                                                           
+  acct                           tinytext                                                                                                                                           
+  partition                      tinytext                                                                                                                                           
+  parent_acct                    tinytext                                                                                                                                           
+  id_parent                      int(10) unsigned                                                                                                                                   
+  lineage                        text                                                                                                                                               
+  shares                         int(11)                                                                                                                                            
+  max_jobs                       int(11)                                                                                                                                            
+  max_jobs_accrue                int(11)                                                                                                                                            
+  min_prio_thresh                int(11)                                                                                                                                            
+  max_submit_jobs                int(11)                                                                                                                                            
+  max_tres_pj                    text                                                                                                                                               
+  max_tres_pn                    text                                                                                                                                               
+  max_tres_mins_pj               text                                                                                                                                               
+  max_tres_run_mins              text                                                                                                                                               
+  max_wall_pj                    int(11)                                                                                                                                            
+  grp_jobs                       int(11)                                                                                                                                            
+  grp_jobs_accrue                int(11)                                                                                                                                            
+  grp_submit_jobs                int(11)                                                                                                                                            
+  grp_tres                       text                                                                                                                                               
+  grp_tres_mins                  text                                                                                                                                               
+  grp_tres_run_mins              text                                                                                                                                               
+  grp_wall                       int(11)                                                                                                                                            
+  priority                       int(10) unsigned                                                                                                                                   
+  def_qos_id                     int(11)                                                                                                                                            
+  qos                            blob                                                                                                                                               
+  delta_qos                      blob                                                                                                                                               
+                                                                                                                                                                                    
+  === create_assoc_usage_day_table ===                                                                                                                                              
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(10) unsigned                                                                                                                                   
+  id_alt                         int(10) unsigned                                                                                                                                   
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_assoc_usage_hour_table ===                                                                                                                                             
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(10) unsigned                                                                                                                                   
+  id_alt                         int(10) unsigned                                                                                                                                   
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_assoc_usage_month_table ===                                                                                                                                            
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(10) unsigned                                                                                                                                   
+  id_alt                         int(10) unsigned                                                                                                                                   
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_event_table ===                                                                                                                                                        
+  deleted                        tinyint(4)                                                                                                                                         
+  time_start                     bigint(20) unsigned                                                                                                                                
+  time_end                       bigint(20) unsigned                                                                                                                                
+  node_name                      tinytext                                                                                                                                           
+  extra                          text                                                                                                                                               
+  cluster_nodes                  text                                                                                                                                               
+  instance_id                    text                                                                                                                                               
+  instance_type                  text                                                                                                                                               
+  reason                         tinytext                                                                                                                                           
+  reason_uid                     int(10) unsigned                                                                                                                                   
+  state                          int(10) unsigned                                                                                                                                   
+  tres                           text                                                                                                                                               
+                                                                                                                                                                                    
+  === create_job_env_table ===                                                                                                                                                      
+  deleted                        tinyint(4)                                                                                                                                         
+  hash_inx                       bigint(20) unsigned                                                                                                                                
+  last_used                      timestamp                                                                                                                                          
+  env_hash                       text                                                                                                                                               
+  env_vars                       longtext                                                                                                                                           
+                                                                                                                                                                                    
+  === create_job_script_table ===                                                                                                                                                   
+  deleted                        tinyint(4)                                                                                                                                         
+  hash_inx                       bigint(20) unsigned                                                                                                                                
+  last_used                      timestamp                                                                                                                                          
+  script_hash                    text                                                                                                                                               
+  batch_script                   longtext                                                                                                                                           
+                                                                                                                                                                                    
+  === create_job_table ===                                                                                                                                                          
+  job_db_inx                     bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  account                        tinytext                                                                                                                                           
+  admin_comment                  text                                                                                                                                               
+  array_task_str                 text                                                                                                                                               
+  array_max_tasks                int(10) unsigned                                                                                                                                   
+  array_task_pending             int(10) unsigned                                                                                                                                   
+  constraints                    text                                                                                                                                               
+  container                      text                                                                                                                                               
+  cpus_req                       int(10) unsigned                                                                                                                                   
+  derived_ec                     int(10) unsigned                                                                                                                                   
+  derived_es                     text                                                                                                                                               
+  env_hash_inx                   bigint(20) unsigned                                                                                                                                
+  exit_code                      int(10) unsigned                                                                                                                                   
+  extra                          text                                                                                                                                               
+  flags                          int(10) unsigned                                                                                                                                   
+  failed_node                    tinytext                                                                                                                                           
+  job_name                       tinytext                                                                                                                                           
+  id_assoc                       int(10) unsigned                                                                                                                                   
+  id_array_job                   int(10) unsigned                                                                                                                                   
+  id_array_task                  int(10) unsigned                                                                                                                                   
+  id_block                       tinytext                                                                                                                                           
+  id_job                         int(10) unsigned                                                                                                                                   
+  id_qos                         int(10) unsigned                                                                                                                                   
+  id_resv                        int(10) unsigned                                                                                                                                   
+  id_wckey                       int(10) unsigned                                                                                                                                   
+  id_user                        int(10) unsigned                                                                                                                                   
+  id_group                       int(10) unsigned                                                                                                                                   
+  het_job_id                     int(10) unsigned                                                                                                                                   
+  het_job_offset                 int(10) unsigned                                                                                                                                   
+  kill_requid                    int(10) unsigned                                                                                                                                   
+  state_reason_prev              int(10) unsigned                                                                                                                                   
+  licenses                       text                                                                                                                                               
+  mcs_label                      tinytext                                                                                                                                           
+  mem_req                        bigint(20) unsigned                                                                                                                                
+  nodelist                       text                                                                                                                                               
+  nodes_alloc                    int(10) unsigned                                                                                                                                   
+  node_inx                       text                                                                                                                                               
+  partition                      tinytext                                                                                                                                           
+  priority                       int(10) unsigned                                                                                                                                   
+  qos_req                        text                                                                                                                                               
+  restart_cnt                    smallint(5) unsigned                                                                                                                               
+  resv_req                       text                                                                                                                                               
+  script_hash_inx                bigint(20) unsigned                                                                                                                                
+  state                          int(10) unsigned                                                                                                                                   
+  timelimit                      int(10) unsigned                                                                                                                                   
+  time_submit                    bigint(20) unsigned                                                                                                                                
+  time_eligible                  bigint(20) unsigned                                                                                                                                
+  time_start                     bigint(20) unsigned                                                                                                                                
+  time_end                       bigint(20) unsigned                                                                                                                                
+  time_suspended                 bigint(20) unsigned                                                                                                                                
+  gres_used                      text                                                                                                                                               
+  wckey                          tinytext                                                                                                                                           
+  work_dir                       text                                                                                                                                               
+  segment_size                   smallint(5) unsigned                                                                                                                               
+  std_err                        text                                                                                                                                               
+  std_in                         text                                                                                                                                               
+  std_out                        text                                                                                                                                               
+  submit_line                    longtext                                                                                                                                           
+  system_comment                 text                                                                                                                                               
+  tres_alloc                     text                                                                                                                                               
+  tres_req                       text                                                                                                                                               
+                                                                                                                                                                                    
+  === create_last_ran_table ===                                                                                                                                                     
+  hourly_rollup                  bigint(20) unsigned                                                                                                                                
+  daily_rollup                   bigint(20) unsigned                                                                                                                                
+  monthly_rollup                 bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_qos_usage_day_table ===                                                                                                                                                
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(10) unsigned                                                                                                                                   
+  id_alt                         int(10) unsigned                                                                                                                                   
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_qos_usage_hour_table ===                                                                                                                                               
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(10) unsigned                                                                                                                                   
+  id_alt                         int(10) unsigned                                                                                                                                   
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_qos_usage_month_table ===                                                                                                                                              
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(10) unsigned                                                                                                                                   
+  id_alt                         int(10) unsigned                                                                                                                                   
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_resv_table ===                                                                                                                                                         
+  id_resv                        int(10) unsigned                                                                                                                                   
+  deleted                        tinyint(4)                                                                                                                                         
+  assoclist                      text                                                                                                                                               
+  flags                          bigint(20) unsigned                                                                                                                                
+  nodelist                       text                                                                                                                                               
+  node_inx                       text                                                                                                                                               
+  resv_name                      text                                                                                                                                               
+  time_start                     bigint(20) unsigned                                                                                                                                
+  time_end                       bigint(20) unsigned                                                                                                                                
+  time_force                     bigint(20) unsigned                                                                                                                                
+  tres                           text                                                                                                                                               
+  unused_wall                    double unsigned                                                                                                                                    
+  comment                        text                                                                                                                                               
+                                                                                                                                                                                    
+  === create_step_table ===                                                                                                                                                         
+  job_db_inx                     bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  exit_code                      int(11)                                                                                                                                            
+  id_step                        int(11)                                                                                                                                            
+  step_het_comp                  int(10) unsigned                                                                                                                                   
+  kill_requid                    int(10) unsigned                                                                                                                                   
+  nodelist                       text                                                                                                                                               
+  nodes_alloc                    int(10) unsigned                                                                                                                                   
+  node_inx                       text                                                                                                                                               
+  state                          smallint(5) unsigned                                                                                                                               
+  step_name                      text                                                                                                                                               
+  task_cnt                       int(10) unsigned                                                                                                                                   
+  task_dist                      int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  time_end                       bigint(20) unsigned                                                                                                                                
+  time_suspended                 bigint(20) unsigned                                                                                                                                
+  timelimit                      int(10) unsigned                                                                                                                                   
+  user_sec                       bigint(20) unsigned                                                                                                                                
+  user_usec                      int(10) unsigned                                                                                                                                   
+  sys_sec                        bigint(20) unsigned                                                                                                                                
+  sys_usec                       int(10) unsigned                                                                                                                                   
+  act_cpufreq                    double unsigned                                                                                                                                    
+  consumed_energy                bigint(20) unsigned                                                                                                                                
+  container                      text                                                                                                                                               
+  req_cpufreq_min                int(10) unsigned                                                                                                                                   
+  req_cpufreq                    int(10) unsigned                                                                                                                                   
+  req_cpufreq_gov                int(10) unsigned                                                                                                                                   
+  cwd                            text                                                                                                                                               
+  std_err                        text                                                                                                                                               
+  std_in                         text                                                                                                                                               
+  std_out                        text                                                                                                                                               
+  submit_line                    longtext                                                                                                                                           
+  tres_alloc                     text                                                                                                                                               
+  tres_usage_in_ave              text                                                                                                                                               
+  tres_usage_in_max              text                                                                                                                                               
+  tres_usage_in_max_taskid       text                                                                                                                                               
+  tres_usage_in_max_nodeid       text                                                                                                                                               
+  tres_usage_in_min              text                                                                                                                                               
+  tres_usage_in_min_taskid       text                                                                                                                                               
+  tres_usage_in_min_nodeid       text                                                                                                                                               
+  tres_usage_in_tot              text                                                                                                                                               
+  tres_usage_out_ave             text                                                                                                                                               
+  tres_usage_out_max             text                                                                                                                                               
+  tres_usage_out_max_taskid      text                                                                                                                                               
+  tres_usage_out_max_nodeid      text                                                                                                                                               
+  tres_usage_out_min             text                                                                                                                                               
+  tres_usage_out_min_taskid      text                                                                                                                                               
+  tres_usage_out_min_nodeid      text                                                                                                                                               
+  tres_usage_out_tot             text                                                                                                                                               
+                                                                                                                                                                                    
+  === create_suspend_table ===                                                                                                                                                      
+  deleted                        tinyint(4)                                                                                                                                         
+  job_db_inx                     bigint(20) unsigned                                                                                                                                
+  id_assoc                       int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  time_end                       bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_usage_day_table ===                                                                                                                                                    
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  count                          bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+  down_secs                      bigint(20) unsigned                                                                                                                                
+  pdown_secs                     bigint(20) unsigned                                                                                                                                
+  idle_secs                      bigint(20) unsigned                                                                                                                                
+  plan_secs                      bigint(20) unsigned                                                                                                                                
+  over_secs                      bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_usage_hour_table ===                                                                                                                                                   
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  count                          bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+  down_secs                      bigint(20) unsigned                                                                                                                                
+  pdown_secs                     bigint(20) unsigned                                                                                                                                
+  idle_secs                      bigint(20) unsigned                                                                                                                                
+  plan_secs                      bigint(20) unsigned                                                                                                                                
+  over_secs                      bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_usage_month_table ===                                                                                                                                                  
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  count                          bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+  down_secs                      bigint(20) unsigned                                                                                                                                
+  pdown_secs                     bigint(20) unsigned                                                                                                                                
+  idle_secs                      bigint(20) unsigned                                                                                                                                
+  plan_secs                      bigint(20) unsigned                                                                                                                                
+  over_secs                      bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_wckey_table ===                                                                                                                                                        
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  is_def                         tinyint(4)                                                                                                                                         
+  id_wckey                       int(10) unsigned                                                                                                                                   
+  wckey_name                     tinytext                                                                                                                                           
+  user                           tinytext                                                                                                                                           
+                                                                                                                                                                                    
+  === create_wckey_usage_day_table ===                                                                                                                                              
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(10) unsigned                                                                                                                                   
+  id_alt                         int(10) unsigned                                                                                                                                   
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_wckey_usage_hour_table ===                                                                                                                                             
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(10) unsigned                                                                                                                                   
+  id_alt                         int(10) unsigned                                                                                                                                   
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === create_wckey_usage_month_table ===                                                                                                                                            
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(10) unsigned                                                                                                                                   
+  id_alt                         int(10) unsigned                                                                                                                                   
+  id_tres                        int(11)                                                                                                                                            
+  time_start                     bigint(20) unsigned                                                                                                                                
+  alloc_secs                     bigint(20) unsigned                                                                                                                                
+                                                                                                                                                                                    
+  === federation_table ===                                                                                                                                                          
+  creation_time                  int(10) unsigned                                                                                                                                   
+  mod_time                       int(10) unsigned                                                                                                                                   
+  deleted                        tinyint(4)                                                                                                                                         
+  name                           tinytext                                                                                                                                           
+  flags                          int(10) unsigned                                                                                                                                   
+                                                                                                                                                                                    
+  === qos_table ===                                                                                                                                                                 
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(11)                                                                                                                                            
+  name                           tinytext                                                                                                                                           
+  description                    text                                                                                                                                               
+  flags                          int(10) unsigned                                                                                                                                   
+  grace_time                     int(10) unsigned                                                                                                                                   
+  max_jobs_pa                    int(11)                                                                                                                                            
+  max_jobs_per_user              int(11)                                                                                                                                            
+  max_jobs_accrue_pa             int(11)                                                                                                                                            
+  max_jobs_accrue_pu             int(11)                                                                                                                                            
+  min_prio_thresh                int(11)                                                                                                                                            
+  max_submit_jobs_pa             int(11)                                                                                                                                            
+  max_submit_jobs_per_user       int(11)                                                                                                                                            
+  max_tres_pa                    text                                                                                                                                               
+  max_tres_pj                    text                                                                                                                                               
+  max_tres_pn                    text                                                                                                                                               
+  max_tres_pu                    text                                                                                                                                               
+  max_tres_mins_pj               text                                                                                                                                               
+  max_tres_run_mins_pa           text                                                                                                                                               
+  max_tres_run_mins_pu           text                                                                                                                                               
+  min_tres_pj                    text                                                                                                                                               
+  max_wall_duration_per_job      int(11)                                                                                                                                            
+  grp_jobs                       int(11)                                                                                                                                            
+  grp_jobs_accrue                int(11)                                                                                                                                            
+  grp_submit_jobs                int(11)                                                                                                                                            
+  grp_tres                       text                                                                                                                                               
+  grp_tres_mins                  text                                                                                                                                               
+  grp_tres_run_mins              text                                                                                                                                               
+  grp_wall                       int(11)                                                                                                                                            
+  preempt                        text                                                                                                                                               
+  preempt_mode                   int(11)                                                                                                                                            
+  preempt_exempt_time            int(10) unsigned                                                                                                                                   
+  priority                       int(10) unsigned                                                                                                                                   
+  usage_factor                   double                                                                                                                                             
+  usage_thres                    double                                                                                                                                             
+  limit_factor                   double                                                                                                                                             
+                                                                                                                                                                                    
+  === res_table ===                                                                                                                                                                 
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(11)                                                                                                                                            
+  name                           tinytext                                                                                                                                           
+  description                    text                                                                                                                                               
+  manager                        tinytext                                                                                                                                           
+  server                         tinytext                                                                                                                                           
+  count                          int(10) unsigned                                                                                                                                   
+  type                           int(10) unsigned                                                                                                                                   
+  flags                          int(10) unsigned                                                                                                                                   
+  last_consumed                  int(10) unsigned                                                                                                                                   
+                                                                                                                                                                                    
+  === table_defs_table ===                                                                                                                                                          
+  creation_time                  int(10) unsigned                                                                                                                                   
+  mod_time                       int(10) unsigned                                                                                                                                   
+  table_name                     text                                                                                                                                               
+  definition                     text                                                                                                                                               
+                                                                                                                                                                                    
+  === tres_table ===                                                                                                                                                                
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(11)                                                                                                                                            
+  type                           tinytext                                                                                                                                           
+  name                           tinytext                                                                                                                                           
+                                                                                                                                                                                    
+  === txn_table ===                                                                                                                                                                 
+  deleted                        tinyint(4)                                                                                                                                         
+  id                             int(11)                                                                                                                                            
+  timestamp                      bigint(20) unsigned                                                                                                                                
+  action                         smallint(6)                                                                                                                                        
+  name                           text                                                                                                                                               
+  actor                          tinytext                                                                                                                                           
+  cluster                        tinytext                                                                                                                                           
+  info                           blob                                                                                                                                               
+                                                                                                                                                                                    
+  === user_table ===                                                                                                                                                                
+  creation_time                  bigint(20) unsigned                                                                                                                                
+  mod_time                       bigint(20) unsigned                                                                                                                                
+  deleted                        tinyint(4)                                                                                                                                         
+  name                           tinytext                                                                                                                                           
+  admin_level                    smallint(6)                             

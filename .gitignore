@@ -1,0 +1,20 @@
+# Secrets - never commit
+config.yaml
+
+# Output files
+*.csv
+results/
+original_code/
+
+# Lock files
+.~lock.*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
