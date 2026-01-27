@@ -5,14 +5,20 @@ Analyses HPC cluster usage by faculty, with a focus on resource efficiency (CPU,
 ## Structure
 
 ```
-src/hpc_data_analysis/
-    aggregate_stats.py      # Aggregate statistics per faculty (→ CSV)
-    job_stats.py            # Per-job efficiency metrics (→ CSV)
-    slurm_utils.py          # Shared utilities: MySQL, LDAP, TRES parsing
-notebooks/
-    visualisation.ipynb     # Jupyter notebook with all plots and documentation
-config.yaml                # MySQL credentials (not committed)
-dev_scripts/               # Diagnostic queries and their output
+hpc-data-analysis/
+├── src/
+│   └── hpc_data_analysis/
+│       ├── __init__.py
+│       ├── slurm_utils.py          # Shared utilities: MySQL, LDAP, TRES parsing
+│       ├── aggregate_stats.py      # Aggregate statistics per faculty (→ CSV)
+│       └── job_stats.py            # Per-job efficiency metrics (→ CSV)
+├── notebooks/
+│   └── visualisation.ipynb         # Jupyter notebook with all plots and documentation
+├── dev_scripts/                    # Diagnostic queries and their output
+├── results/                        # Generated CSV output (gitignored)
+├── pyproject.toml                  # Package metadata and dependencies
+├── config.yaml                     # MySQL credentials (not committed)
+└── README.md
 ```
 
 ## Installation
