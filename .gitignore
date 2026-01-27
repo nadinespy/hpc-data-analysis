@@ -3,6 +3,7 @@ config.yaml
 
 # Output files
 *.csv
+*.html
 results/
 original_code/
 
@@ -13,6 +14,9 @@ original_code/
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+dist/
+build/
 .ipynb_checkpoints/
 
 # IDE

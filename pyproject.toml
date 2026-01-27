@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hpc-data-analysis"
+version = "0.1.0"
+description = "HPC cluster usage analysis — resource efficiency metrics from Slurm accounting data"
+requires-python = ">=3.9"
+dependencies = [
+    "mysql-connector-python",
+    "python-ldap",
+    "PyYAML",
+]
+
+[project.optional-dependencies]
+notebook = [
+    "pandas",
+    "numpy",
+    "matplotlib",
+    "seaborn",
+    "scipy",
+    "ipywidgets",
+]
+
+[project.scripts]
+hpc-aggregate-stats = "hpc_data_analysis.aggregate_stats:main"
+hpc-job-stats = "hpc_data_analysis.job_stats:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

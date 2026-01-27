@@ -5,35 +5,44 @@ Analyses HPC cluster usage by faculty, with a focus on resource efficiency (CPU,
 ## Structure
 
 ```
-hpc_stats.py                  # Aggregate statistics per faculty (→ CSV)
-job_level_metrics.py           # Per-job efficiency metrics (→ CSV)
-slurm_utils.py                 # Shared utilities: MySQL, LDAP, TRES parsing
-hpc_stats_visualisation.ipynb  # Jupyter notebook with all plots and documentation
-config.yaml                   # MySQL credentials (not committed)
-original_code/                 # Previous version of the analysis scripts
-dev_scripts/                   # Diagnostic queries and their output
+src/hpc_data_analysis/
+    aggregate_stats.py      # Aggregate statistics per faculty (→ CSV)
+    job_stats.py            # Per-job efficiency metrics (→ CSV)
+    slurm_utils.py          # Shared utilities: MySQL, LDAP, TRES parsing
+notebooks/
+    visualisation.ipynb     # Jupyter notebook with all plots and documentation
+config.yaml                # MySQL credentials (not committed)
+dev_scripts/               # Diagnostic queries and their output
 ```
 
-## Setup
+## Installation
 
-### Config
+```bash
+pip install .
+```
+
+For notebook support:
+
+```bash
+pip install ".[notebook]"
+```
+
+For development (editable install):
+
+```bash
+pip install -e ".[notebook]"
+```
+
+## Configuration
 
 Create a `config.yaml` with MySQL connection details:
 
 ```yaml
-mysql_host: <hostname>
-mysql_port: 3306
-mysql_user: <user>
-mysql_password: <password>
-mysql_database: <slurm_acct_db>
-cluster_name: <cluster>
-```
-
-### Dependencies
-
-```
-pip install mysql-connector-python python-ldap PyYAML
-pip install pandas numpy matplotlib seaborn scipy ipywidgets  # for the notebook
+mysql:
+    host: <hostname>
+    user: <user>
+    password: <password>
+    database: <slurm_acct_db>
 ```
 
 ## Usage
@@ -41,21 +50,20 @@ pip install pandas numpy matplotlib seaborn scipy ipywidgets  # for the notebook
 ### 1. Generate aggregate faculty statistics
 
 ```bash
-python3 hpc_stats.py --since 2025-01-01 --until 2025-02-01
+hpc-aggregate-stats --since 2025-01-01 --until 2025-02-01 \
+    --collate_by st=faculty --output results/hpc_stats_output.csv
 ```
-
-Outputs `hpc_stats_output.csv` and `hpc_stats_output_global.csv`.
 
 ### 2. Generate per-job metrics
 
 ```bash
-python3 job_level_metrics.py --since 2025-01-01 --until 2025-02-01 \
-    --output job_level_metrics.csv --include-faculty
+hpc-job-stats --since 2025-01-01 --until 2025-02-01 \
+    --output results/job_level_metrics.csv --include-faculty
 ```
 
 ### 3. Run the notebook
 
-Open `hpc_stats_visualisation.ipynb` in Jupyter. It reads the CSV files generated above. The notebook includes a Technical Appendix documenting the methodology, efficiency formulas, and open questions.
+Open `notebooks/visualisation.ipynb` in Jupyter. It reads the CSV files generated above. The notebook includes a Technical Appendix documenting the methodology, efficiency formulas, and open questions.
 
 ## What it computes
 

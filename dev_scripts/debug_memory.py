@@ -3,6 +3,7 @@
 
 import mysql.connector
 import re
+import yaml
 
 def parse_tres_value(tres_string, tres_id):
     if not tres_string:
@@ -17,11 +18,14 @@ def parse_tres_value(tres_string, tres_id):
         pass
     return 0
 
+with open("config.yaml", "r") as f:
+    config = yaml.safe_load(f)
+mysql_conf = config["mysql"]
 conn = mysql.connector.connect(
-    host="ermysqlr2.er.kcl.ac.uk",
-    user="slurm_create_ro",
-    password="qu4c46wQookqTWdq",
-    database="slurm_create"
+    host=mysql_conf["host"],
+    user=mysql_conf["user"],
+    password=mysql_conf["password"],
+    database=mysql_conf["database"],
 )
 cursor = conn.cursor()
 

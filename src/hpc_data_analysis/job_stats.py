@@ -13,7 +13,7 @@ Usage:
 import argparse
 import sys
 
-from slurm_utils import (
+from hpc_data_analysis.slurm_utils import (
     connect_mysql, discover_special_steps,
     LdapClient, load_ad_config, get_user_attribute,
     parse_tres_value, parse_date_range, format_value,
