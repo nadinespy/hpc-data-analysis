@@ -1,0 +1,132 @@
+================================================================================
+PART 1: Sample job with all relevant columns (create_job_table)
+================================================================================
+
+Job-level data:
+  job_db_inx:   312560980827385856  (internal DB key, links to steps)
+  id_job:       31603512  (Slurm job ID users see)
+  state:        3  (3 = completed)
+  time_submit:  1770123573  (Unix timestamp)
+  time_start:   1770123601  (Unix timestamp)
+  time_end:     1770123602  (Unix timestamp)
+  timelimit:    600  (in minutes)
+  cpus_req:     8  (requested CPUs - direct column)
+  mem_req:      9223372036854776808  (requested memory - encoded, may have flag bit)
+  nodes_alloc:  1  (nodes allocated)
+  tres_req:     1=8,2=8000,4=1,1001=1 (requested resources - TRES encoded)
+  tres_alloc:   1=8,2=8000,3=18446744073709551614,4=1,1001=1 (allocated resources - TRES encoded)
+
+================================================================================
+PART 2: Steps for the sample job (create_step_table)
+================================================================================
+
+Job 312560980827385856 has 1 step(s):
+
+  Step id_step=-5, name='batch':
+    state:             3
+    time_start:        1770123601
+    time_end:          1770123602
+    user_sec:          0
+    user_usec:         205754
+    sys_sec:           0
+    sys_usec:          760462
+    tres_alloc:        1=8,2=8000,4=1,1001=1
+    tres_usage_in_max: 1=965,2=25006080,3=0,6=0,7=0,8=0,1007=0,1004=0
+    tres_usage_in_tot: 1=965,2=25006080,3=0,6=0,7=0,8=0,1007=0,1004=0
+
+================================================================================
+PART 3: How many steps do jobs typically have?
+================================================================================
+
+   steps          jobs
+  ------  ------------
+       1      30417219
+       2        246775
+       3          4830
+       4           997
+       5           959
+       6           824
+       7           385
+       8           135
+       9           440
+      10            79
+      11           716
+      12            69
+      13           102
+      14            46
+      15           113
+      16            72
+      17           244
+      18            21
+      19            35
+      20            27
+
+================================================================================
+PART 4: Sample job with SINGLE step
+================================================================================
+
+Job 31603512 (single step):
+  Job-level:
+    cpus_req:       8
+    tres_req:       1=8,2=8000,4=1,1001=1
+    tres_alloc:     1=8,2=8000,3=18446744073709551614,4=1,1001=1
+    time_start:     1770123601
+    time_end:       1770123602
+
+  Step: id=-5, name='batch'
+    user_sec:          0
+    sys_sec:           0
+    user_usec:         205754
+    sys_usec:          760462
+    tres_usage_in_max: 1=965,2=25006080,3=0,6=0,7=0,8=0,1007=0,1004=0
+
+================================================================================
+PART 5: Sample job with MULTIPLE steps
+================================================================================
+
+Job 31580315 (multiple steps):
+  Job-level:
+    cpus_req:    620
+    tres_req:    1=620,2=3723800,4=5
+    tres_alloc:  1=620,2=3723800,4=5
+    time_start:  1770071526
+    time_end:    1770076674
+
+  Steps:
+     id_step  step_name       user_sec     sys_sec   user_usec    sys_usec  tres_usage_in_max
+    --------  ------------  ----------  ----------  ----------  ----------  --------------------
+          -5  batch             433442        9512       74841      543936  1=442785951,2=158811746304,3=0,6=159875606916,7=0,8=184
+           0  nonabelian-currents-4d-exec-umibi           0           0           0           0  1=48984020,2=108255973376,3=0,6=88976469586,7=0,8=10
+           1  nonabelian-currents-4d-exec-umibi           0           0           0           0  1=46673807,2=106011979776,3=0,6=86992774032,7=0,8=10
+           2  nonabelian-currents-4d-exec-umibi           0           0           0           0  1=48420336,2=106840576000,3=0,6=89164601656,7=0,8=10
+           3  nonabelian-currents-4d-exec-umibi           0           0           0           0  1=49416724,2=107583148032,3=0,6=88798568074,7=0,8=10
+           4  orted                  0           0           0           0  1=4497014,2=64835477504,3=0,6=29729083764,7=0,8=190
+           5  orted                  0           0           0           0  1=369246039,2=69637513216,3=0,6=5858613610,7=0,8=18
+
+================================================================================
+PART 6: Step names and their frequencies
+================================================================================
+
+  step_name              id_step         count
+  --------------------  --------  ------------
+  batch                       -5      30516866
+  bash                         0        148091
+  cross-binary                 0         43313
+  gsearch13                    0         13900
+  python3                      0         10698
+  python3.12                   0          8847
+  orted                        0          7496
+  python3                      1          5307
+  python                       0          4314
+  hostname                     0          3015
+  python3                      2          2944
+  python3                      3          2857
+  python3                      4          2635
+  Rscript                      0          2587
+  python3                      5          2541
+  python3                      6          2533
+  python3                      7          2516
+  python3                      8          2297
+  python3                      9          2291
+  singularity                  0          2191
+

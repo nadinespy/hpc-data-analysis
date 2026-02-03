@@ -169,6 +169,183 @@ def discover_special_steps(cursor):
     return steps
 
 
+def fetch_job_data(cursor, since_ts, until_ts, special_steps):
+    """Fetch job data from MySQL with step aggregation.
+
+    CPU time: sums regular steps only; falls back to batch step for jobs
+    without srun steps (avoids double-counting batch + srun steps).
+    Memory: extracts numeric memory value from TRES string per step,
+    then takes the numeric MAX (not string MAX).
+
+    Args:
+        cursor: MySQL cursor
+        since_ts: Start timestamp (Unix)
+        until_ts: End timestamp (Unix)
+        special_steps: dict from discover_special_steps(), e.g. {'batch': -5}
+
+    Returns:
+        cursor with query results. Each row contains:
+        (job_db_inx, id_job, username, state, exit_code, time_submit,
+         time_start, time_end, cpus_req, tres_req, timelimit, nodes_alloc,
+         total_user_sec, total_sys_sec, total_user_usec, total_sys_usec,
+         max_mem_bytes)
+    """
+    # Build exclusion list from all discovered special steps
+    exclude_ids = ", ".join(str(sid) for sid in special_steps.values())
+    batch_id = special_steps.get("batch")
+
+    query = f"""
+        SELECT
+            j.job_db_inx,
+            j.id_job,
+            a.user,
+            j.state,
+            j.exit_code,
+            j.time_submit,
+            j.time_start,
+            j.time_end,
+            j.cpus_req,
+            j.tres_req,
+            j.timelimit,
+            j.nodes_alloc,
+            COALESCE(
+                NULLIF(SUM(CASE WHEN s.id_step NOT IN ({exclude_ids})
+                                THEN s.user_sec ELSE 0 END), 0),
+                MAX(CASE WHEN s.id_step = {batch_id} THEN s.user_sec END),
+                0
+            ) AS total_user_sec,
+            COALESCE(
+                NULLIF(SUM(CASE WHEN s.id_step NOT IN ({exclude_ids})
+                                THEN s.sys_sec ELSE 0 END), 0),
+                MAX(CASE WHEN s.id_step = {batch_id} THEN s.sys_sec END),
+                0
+            ) AS total_sys_sec,
+            COALESCE(
+                NULLIF(SUM(CASE WHEN s.id_step NOT IN ({exclude_ids})
+                                THEN s.user_usec ELSE 0 END), 0),
+                MAX(CASE WHEN s.id_step = {batch_id} THEN s.user_usec END),
+                0
+            ) AS total_user_usec,
+            COALESCE(
+                NULLIF(SUM(CASE WHEN s.id_step NOT IN ({exclude_ids})
+                                THEN s.sys_usec ELSE 0 END), 0),
+                MAX(CASE WHEN s.id_step = {batch_id} THEN s.sys_usec END),
+                0
+            ) AS total_sys_usec,
+            MAX(
+                CAST(
+                    SUBSTRING_INDEX(
+                        SUBSTRING_INDEX(CONCAT(',', s.tres_usage_in_max), ',2=', -1),
+                        ',', 1
+                    ) AS UNSIGNED
+                )
+            ) AS max_mem_bytes
+        FROM create_job_table j
+        JOIN create_assoc_table a ON j.id_assoc = a.id_assoc
+        LEFT JOIN create_step_table s ON j.job_db_inx = s.job_db_inx
+        WHERE j.time_submit >= %s
+          AND j.time_submit < %s
+          AND j.time_start > 0
+          AND j.time_end > 0
+          AND j.time_end >= j.time_start
+        GROUP BY j.job_db_inx
+    """
+    cursor.execute(query, (since_ts, until_ts))
+    return cursor
+
+
+def calculate_job_metrics(row):
+    """Calculate common job metrics from a database row.
+
+    Args:
+        row: Database row from fetch_job_data query
+
+    Returns:
+        dict with calculated metrics:
+        - id_job, username, state, exit_code
+        - time_submit, time_start, time_end
+        - elapsed, wait_time, timelimit_sec
+        - total_user, total_sys, total_cpu (all in seconds, including usec)
+        - req_cpus, maxrss, reqmem (in bytes)
+        - cpu_eff, mem_eff, time_eff (percentages or None)
+        - cpu_requested (elapsed * req_cpus)
+        - user_cpu_pct (percentage or None)
+        - nodes_alloc
+        - is_success (bool)
+    """
+    (job_db_inx, id_job, username, state, exit_code, time_submit, time_start,
+     time_end, cpus_req_col, tres_req, timelimit, nodes_alloc,
+     total_user_sec, total_sys_sec, total_user_usec, total_sys_usec,
+     max_mem_bytes) = row
+
+    # Convert types
+    time_submit = float(time_submit) if time_submit else 0
+    time_start = float(time_start) if time_start else 0
+    time_end = float(time_end) if time_end else 0
+    total_user_sec = float(total_user_sec) if total_user_sec else 0
+    total_sys_sec = float(total_sys_sec) if total_sys_sec else 0
+    total_user_usec = float(total_user_usec) if total_user_usec else 0
+    total_sys_usec = float(total_sys_usec) if total_sys_usec else 0
+    nodes_alloc = int(nodes_alloc) if nodes_alloc else 0
+    timelimit = timelimit or 0
+
+    # Derived values - include microseconds in user/sys totals
+    total_user = total_user_sec + (total_user_usec / 1_000_000)
+    total_sys = total_sys_sec + (total_sys_usec / 1_000_000)
+    elapsed = time_end - time_start if time_end and time_start else 0
+    wait_time = time_start - time_submit if time_start and time_submit else 0
+    total_cpu = total_user + total_sys
+    timelimit_sec = timelimit * 60
+
+    # CPU values - use tres_req for consistency
+    req_cpus = parse_tres_value(tres_req, TRES_CPU_ID)
+    if req_cpus == 0:
+        req_cpus = cpus_req_col or 0  # fallback to direct column
+
+    # Memory values
+    maxrss = int(max_mem_bytes) if max_mem_bytes else 0
+    reqmem_mb = parse_tres_value(tres_req, TRES_MEM_ID)
+    reqmem = reqmem_mb * 1024 * 1024
+
+    # Per-job efficiencies
+    cpu_requested = elapsed * req_cpus
+    cpu_eff = (total_cpu / cpu_requested * 100) if cpu_requested > 0 else None
+    mem_eff = (maxrss / reqmem * 100) if reqmem > 0 else None
+    time_eff = (elapsed / timelimit_sec * 100) if timelimit_sec > 0 else None
+
+    # User vs system CPU ratio (now includes microseconds)
+    user_cpu_pct = (total_user / total_cpu * 100) if total_cpu > 0 else None
+
+    is_success = state in SUCCESS_STATES
+
+    return {
+        "job_db_inx": job_db_inx,
+        "id_job": id_job,
+        "username": username,
+        "state": state,
+        "exit_code": exit_code or 0,
+        "time_submit": time_submit,
+        "time_start": time_start,
+        "time_end": time_end,
+        "elapsed": elapsed,
+        "wait_time": wait_time,
+        "timelimit_sec": timelimit_sec,
+        "total_user": total_user,
+        "total_sys": total_sys,
+        "total_cpu": total_cpu,
+        "req_cpus": req_cpus,
+        "maxrss": maxrss,
+        "reqmem": reqmem,
+        "cpu_requested": cpu_requested,
+        "cpu_eff": cpu_eff,
+        "mem_eff": mem_eff,
+        "time_eff": time_eff,
+        "user_cpu_pct": user_cpu_pct,
+        "nodes_alloc": nodes_alloc,
+        "is_success": is_success,
+    }
+
+
 # =============================================================================
 # LDAP Functions
 # =============================================================================

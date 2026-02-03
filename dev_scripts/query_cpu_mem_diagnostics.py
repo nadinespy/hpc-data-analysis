@@ -2,10 +2,11 @@
 """Diagnostic script to investigate CPU and memory efficiency edge cases.
 
 Tests:
-1. Does AllocCPUS (from tres_alloc) differ from cpus_req? (Could explain CPU eff > 100%)
-2. Does mem_req encode --mem vs --mem-per-cpu via flag bit?
-3. Does tres_req memory match mem_req, or is it per-cpu vs total?
-4. Are jobs with mem eff > 100% correlated with --mem-per-cpu?
+1.  Does AllocCPUS (from tres_alloc) differ from cpus_req? (Could explain CPU eff > 100%)
+1b. Does cpus_req match the CPU value in tres_req? (Verify column vs TRES string consistency)
+2.  Does mem_req encode --mem vs --mem-per-cpu via flag bit?
+3.  Does tres_req memory match mem_req, or is it per-cpu vs total?
+4.  Are jobs with mem eff > 100% correlated with --mem-per-cpu?
 
 Saves output to cpu_mem_diagnostics_output.txt
 """
@@ -137,6 +138,109 @@ with open(OUTPUT_FILE, 'w') as f:
         out(f"Error fetching differing jobs: {e}")
 
     # =========================================================================
+    # Part 1b: cpus_req vs tres_req CPU (TRES ID 1)
+    # =========================================================================
+    out()
+    out("=" * 80)
+    out("PART 1b: cpus_req vs ReqCPUS (TRES ID 1 from tres_req)")
+    out("=" * 80)
+    out()
+    out("Checking if cpus_req column matches the CPU value encoded in tres_req.")
+
+    # Compare cpus_req vs tres_req CPU value
+    try:
+        cur.execute("""
+            SELECT
+                j.cpus_req,
+                CAST(
+                    SUBSTRING_INDEX(
+                        SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',1=', -1),
+                        ',', 1
+                    ) AS UNSIGNED
+                ) AS req_cpus_from_tres,
+                COUNT(*) as cnt
+            FROM create_job_table j
+            WHERE j.time_start > 0 AND j.time_end > 0
+            GROUP BY cpus_req, req_cpus_from_tres
+            ORDER BY cnt DESC
+            LIMIT 30
+        """)
+        out()
+        out("cpus_req vs tres_req CPU (top 30 combos by frequency):")
+        out(f"  {'cpus_req':>10}  {'tres_req_cpu':>14}  {'count':>10}  {'comparison':>15}")
+        for row in cur:
+            cpus_req, tres_req_cpu, cnt = row
+            if cpus_req == tres_req_cpu:
+                cmp = "EQUAL"
+            elif tres_req_cpu > cpus_req:
+                cmp = "tres > col"
+            else:
+                cmp = "tres < col"
+            out(f"  {cpus_req:>10}  {tres_req_cpu:>14}  {cnt:>10}  {cmp:>15}")
+    except Exception as e:
+        out(f"Error comparing: {e}")
+
+    # Count jobs where cpus_req differs from tres_req CPU
+    try:
+        cur.execute("""
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN j.cpus_req = CAST(
+                    SUBSTRING_INDEX(
+                        SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',1=', -1),
+                        ',', 1
+                    ) AS UNSIGNED
+                ) THEN 1 ELSE 0 END) as equal_count,
+                SUM(CASE WHEN j.cpus_req != CAST(
+                    SUBSTRING_INDEX(
+                        SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',1=', -1),
+                        ',', 1
+                    ) AS UNSIGNED
+                ) THEN 1 ELSE 0 END) as differ_count
+            FROM create_job_table j
+            WHERE j.time_start > 0 AND j.time_end > 0
+        """)
+        row = cur.fetchone()
+        out()
+        out(f"Summary: total={row[0]}, equal={row[1]}, differ={row[2]}")
+    except Exception as e:
+        out(f"Error counting: {e}")
+
+    # Show sample jobs where cpus_req differs from tres_req CPU
+    try:
+        cur.execute("""
+            SELECT j.id_job, j.cpus_req,
+                   CAST(
+                       SUBSTRING_INDEX(
+                           SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',1=', -1),
+                           ',', 1
+                       ) AS UNSIGNED
+                   ) AS tres_req_cpu,
+                   j.tres_req
+            FROM create_job_table j
+            WHERE j.time_start > 0 AND j.time_end > 0
+              AND j.cpus_req != CAST(
+                  SUBSTRING_INDEX(
+                      SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',1=', -1),
+                      ',', 1
+                  ) AS UNSIGNED
+              )
+            ORDER BY j.id_job DESC
+            LIMIT 10
+        """)
+        rows = cur.fetchall()
+        out()
+        if rows:
+            out("Sample jobs where cpus_req != tres_req CPU:")
+            out(f"  {'id_job':>10}  {'cpus_req':>10}  {'tres_req_cpu':>14}  tres_req")
+            for row in rows:
+                out(f"  {row[0]:>10}  {row[1]:>10}  {row[2]:>14}  {row[3]}")
+        else:
+            out("No jobs found where cpus_req != tres_req CPU (they always match)")
+    except Exception as e:
+        out(f"Error fetching differing jobs: {e}")
+
+    # =========================================================================
     # Part 2: mem_req flag bit (--mem vs --mem-per-cpu)
     # =========================================================================
     out()
@@ -158,11 +262,11 @@ with open(OUTPUT_FILE, 'w') as f:
 
     # Check flag bit distribution
     out()
-    out("mem_req flag bit distribution (bit 31 = --mem-per-cpu):")
+    out("mem_req flag bit distribution (bit 63 = --mem-per-cpu):")
     try:
         cur.execute("""
             SELECT
-                CASE WHEN mem_req & 0x80000000 != 0 THEN 'per-cpu (flag set)'
+                CASE WHEN mem_req & 0x800000000000000000000000 != 0 THEN 'per-cpu (flag set)'
                      ELSE 'per-node (no flag)' END as mem_type,
                 COUNT(*) as cnt
             FROM create_job_table
@@ -189,8 +293,8 @@ with open(OUTPUT_FILE, 'w') as f:
                 j.id_job,
                 j.cpus_req,
                 j.mem_req,
-                j.mem_req & 0x80000000 AS is_per_cpu,
-                j.mem_req & 0x7FFFFFFF AS mem_value_raw,
+                j.mem_req & 0x8000000000000000 AS is_per_cpu,
+                j.mem_req & 0x7FFFFFFFFFFFFFFF AS mem_value_raw,
                 j.tres_req,
                 CAST(
                     SUBSTRING_INDEX(
@@ -200,7 +304,7 @@ with open(OUTPUT_FILE, 'w') as f:
                 ) AS tres_req_mem
             FROM create_job_table j
             WHERE j.time_start > 0 AND j.time_end > 0
-              AND j.mem_req & 0x80000000 != 0
+              AND j.mem_req & 0x8000000000000000 != 0
               AND j.cpus_req > 1
             ORDER BY j.id_job DESC
             LIMIT 15
@@ -215,36 +319,132 @@ with open(OUTPUT_FILE, 'w') as f:
     except Exception as e:
         out(f"Error: {e}")
 
-    # Same for --mem (per-node) jobs for comparison
+    # Verify: for --mem-per-cpu jobs, does mem_value × cpus_req = tres_mem?
+    out()
+    out("Verification: for --mem-per-cpu jobs, does (mem_value × cpus_req) = tres_mem?")
+    try:
+        cur.execute("""
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN (j.mem_req & 0x7FFFFFFFFFFFFFFF) * j.cpus_req =
+                    CAST(
+                        SUBSTRING_INDEX(
+                            SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',2=', -1),
+                            ',', 1
+                        ) AS UNSIGNED
+                    ) THEN 1 ELSE 0 END) as match_count,
+                SUM(CASE WHEN (j.mem_req & 0x7FFFFFFFFFFFFFFF) * j.cpus_req !=
+                    CAST(
+                        SUBSTRING_INDEX(
+                            SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',2=', -1),
+                            ',', 1
+                        ) AS UNSIGNED
+                    ) THEN 1 ELSE 0 END) as differ_count
+            FROM create_job_table j
+            WHERE j.time_start > 0 AND j.time_end > 0
+              AND j.mem_req & 0x8000000000000000 != 0
+        """)
+        row = cur.fetchone()
+        out(f"  --mem-per-cpu jobs: total={row[0]}, match={row[1]}, differ={row[2]}")
+        if row[0] > 0:
+            match_pct = (row[1] / row[0]) * 100 if row[0] else 0
+            out(f"  Match rate: {match_pct:.1f}%")
+    except Exception as e:
+        out(f"Error: {e}")
+
+    # Sample --mem-per-cpu jobs showing the calculation
     try:
         cur.execute("""
             SELECT
                 j.id_job,
                 j.cpus_req,
-                j.mem_req,
-                j.mem_req & 0x7FFFFFFF AS mem_value_raw,
-                j.tres_req,
+                j.mem_req & 0x7FFFFFFFFFFFFFFF AS mem_value,
+                (j.mem_req & 0x7FFFFFFFFFFFFFFF) * j.cpus_req AS calculated_total,
                 CAST(
                     SUBSTRING_INDEX(
                         SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',2=', -1),
                         ',', 1
                     ) AS UNSIGNED
-                ) AS tres_req_mem
+                ) AS tres_mem,
+                j.tres_req
             FROM create_job_table j
             WHERE j.time_start > 0 AND j.time_end > 0
-              AND j.mem_req & 0x80000000 = 0
+              AND j.mem_req & 0x8000000000000000 != 0
+            ORDER BY j.id_job DESC
+            LIMIT 10
+        """)
+        out()
+        out("Sample --mem-per-cpu jobs (showing mem_value × cpus = calculated vs tres_mem):")
+        out(f"  {'id_job':>10}  {'cpus':>5}  {'mem_value':>10}  {'calculated':>12}  {'tres_mem':>10}  {'match?':>7}")
+        for row in cur:
+            id_job, cpus, mem_value, calculated, tres_mem, tres_req = row
+            match = "YES" if calculated == tres_mem else "NO"
+            out(f"  {id_job:>10}  {cpus:>5}  {mem_value:>10}  {calculated:>12}  {tres_mem:>10}  {match:>7}")
+    except Exception as e:
+        out(f"Error: {e}")
+
+    # Same for --mem (per-node) jobs for comparison
+    out()
+    out("For --mem (per-node) jobs, mem_value should equal tres_mem directly:")
+    try:
+        cur.execute("""
+            SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN (j.mem_req & 0x7FFFFFFFFFFFFFFF) =
+                    CAST(
+                        SUBSTRING_INDEX(
+                            SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',2=', -1),
+                            ',', 1
+                        ) AS UNSIGNED
+                    ) THEN 1 ELSE 0 END) as match_count,
+                SUM(CASE WHEN (j.mem_req & 0x7FFFFFFFFFFFFFFF) !=
+                    CAST(
+                        SUBSTRING_INDEX(
+                            SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',2=', -1),
+                            ',', 1
+                        ) AS UNSIGNED
+                    ) THEN 1 ELSE 0 END) as differ_count
+            FROM create_job_table j
+            WHERE j.time_start > 0 AND j.time_end > 0
+              AND j.mem_req & 0x8000000000000000 = 0
+              AND j.mem_req > 0
+        """)
+        row = cur.fetchone()
+        out(f"  --mem (per-node) jobs: total={row[0]}, match={row[1]}, differ={row[2]}")
+        if row[0] > 0:
+            match_pct = (row[1] / row[0]) * 100 if row[0] else 0
+            out(f"  Match rate: {match_pct:.1f}%")
+    except Exception as e:
+        out(f"Error: {e}")
+
+    try:
+        cur.execute("""
+            SELECT
+                j.id_job,
+                j.cpus_req,
+                j.mem_req & 0x7FFFFFFFFFFFFFFF AS mem_value,
+                CAST(
+                    SUBSTRING_INDEX(
+                        SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',2=', -1),
+                        ',', 1
+                    ) AS UNSIGNED
+                ) AS tres_mem,
+                j.tres_req
+            FROM create_job_table j
+            WHERE j.time_start > 0 AND j.time_end > 0
+              AND j.mem_req & 0x8000000000000000 = 0
               AND j.cpus_req > 1
               AND j.mem_req > 0
             ORDER BY j.id_job DESC
-            LIMIT 15
+            LIMIT 10
         """)
         out()
-        out("--mem (per-node) jobs with cpus_req > 1, for comparison:")
-        out(f"  {'id_job':>10}  {'cpus':>5}  {'mem_req':>12}  {'tres_mem':>10}  {'match?':>8}  tres_req")
+        out("Sample --mem (per-node) jobs:")
+        out(f"  {'id_job':>10}  {'cpus':>5}  {'mem_value':>12}  {'tres_mem':>10}  {'match?':>8}")
         for row in cur:
-            id_job, cpus, mem_req, mem_value, tres_req, tres_mem = row
+            id_job, cpus, mem_value, tres_mem, tres_req = row
             match = "YES" if mem_value == tres_mem else "NO"
-            out(f"  {id_job:>10}  {cpus:>5}  {mem_req:>12}  {tres_mem:>10}  {match:>8}  {tres_req}")
+            out(f"  {id_job:>10}  {cpus:>5}  {mem_value:>12}  {tres_mem:>10}  {match:>8}")
     except Exception as e:
         out(f"Error: {e}")
 
@@ -262,8 +462,8 @@ with open(OUTPUT_FILE, 'w') as f:
                 j.id_job,
                 j.cpus_req,
                 j.mem_req,
-                CASE WHEN j.mem_req & 0x80000000 != 0 THEN 'per-cpu' ELSE 'per-node' END as mem_type,
-                j.mem_req & 0x7FFFFFFF AS mem_value,
+                CASE WHEN j.mem_req & 0x8000000000000000 != 0 THEN 'per-cpu' ELSE 'per-node' END as mem_type,
+                j.mem_req & 0x7FFFFFFFFFFFFFFF AS mem_value,
                 CAST(
                     SUBSTRING_INDEX(
                         SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',2=', -1),
@@ -305,7 +505,7 @@ with open(OUTPUT_FILE, 'w') as f:
             SELECT mem_type, COUNT(*) as cnt FROM (
                 SELECT
                     j.job_db_inx,
-                    CASE WHEN j.mem_req & 0x80000000 != 0 THEN 'per-cpu' ELSE 'per-node' END as mem_type,
+                    CASE WHEN j.mem_req & 0x8000000000000000 != 0 THEN 'per-cpu' ELSE 'per-node' END as mem_type,
                     CAST(
                         SUBSTRING_INDEX(
                             SUBSTRING_INDEX(CONCAT(',', j.tres_req), ',2=', -1),

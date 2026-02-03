@@ -16,10 +16,11 @@ import re
 import sys
 
 from hpc_data_analysis.slurm_utils import (
-    load_config, get_mysql_config, connect_mysql, discover_special_steps,
+    connect_mysql, discover_special_steps,
+    fetch_job_data, calculate_job_metrics,
     LdapClient, load_ad_config, get_user_attribute,
-    parse_tres_value, parse_date_range, format_value,
-    TRES_MEM_ID, FINISHED_STATES, SUCCESS_STATES, STATE_NAMES,
+    parse_date_range, format_value,
+    FINISHED_STATES, SUCCESS_STATES, STATE_NAMES,
 )
 
 
@@ -60,13 +61,13 @@ def init_stats_dict():
         "total_sys_cpu": 0,
         "total_maxrss": 0,
         "total_reqmem": 0,
-        "total_alloccpus": 0,
+        "total_reqcpus": 0,
         "total_timelimit": 0,
         "total_nodes": 0,
         "total_wait": 0,
 
         # For efficiency calculations (all jobs)
-        "sum_cpu_allocated": 0,
+        "sum_cpu_requested": 0,
         "sum_job_cpu_eff": 0,
         "sum_job_mem_eff": 0,
         "sum_job_time_eff": 0,
@@ -79,7 +80,7 @@ def init_stats_dict():
         "success_total_cpu": 0,
         "success_total_maxrss": 0,
         "success_total_reqmem": 0,
-        "success_sum_cpu_allocated": 0,
+        "success_sum_cpu_requested": 0,
         "success_sum_job_cpu_eff": 0,
         "success_sum_job_mem_eff": 0,
         "success_sum_job_time_eff": 0,
@@ -91,139 +92,38 @@ def init_stats_dict():
 
 
 # =============================================================================
-# Data Fetching
-# =============================================================================
-
-def fetch_job_data(cursor, since_ts, until_ts, special_steps):
-    """Fetch job data from MySQL with step aggregation.
-
-    CPU time: sums regular steps only; falls back to batch step for jobs
-    without srun steps (avoids double-counting batch + srun steps).
-    Memory: extracts numeric memory value from TRES string per step,
-    then takes the numeric MAX (not string MAX).
-
-    Args:
-        special_steps: dict from discover_special_steps(), e.g. {'batch': -5}
-    """
-    # Build exclusion list from all discovered special steps
-    exclude_ids = ", ".join(str(sid) for sid in special_steps.values())
-    batch_id = special_steps.get("batch")
-
-    query = f"""
-        SELECT
-            j.job_db_inx,
-            j.id_job,
-            a.user,
-            j.state,
-            j.exit_code,
-            j.time_submit,
-            j.time_start,
-            j.time_end,
-            j.cpus_req,
-            j.tres_req,
-            j.timelimit,
-            j.nodes_alloc,
-            COALESCE(
-                NULLIF(SUM(CASE WHEN s.id_step NOT IN ({exclude_ids})
-                                THEN s.user_sec ELSE 0 END), 0),
-                MAX(CASE WHEN s.id_step = {batch_id} THEN s.user_sec END),
-                0
-            ) AS total_user_sec,
-            COALESCE(
-                NULLIF(SUM(CASE WHEN s.id_step NOT IN ({exclude_ids})
-                                THEN s.sys_sec ELSE 0 END), 0),
-                MAX(CASE WHEN s.id_step = {batch_id} THEN s.sys_sec END),
-                0
-            ) AS total_sys_sec,
-            COALESCE(
-                NULLIF(SUM(CASE WHEN s.id_step NOT IN ({exclude_ids})
-                                THEN s.user_usec + s.sys_usec ELSE 0 END), 0),
-                MAX(CASE WHEN s.id_step = {batch_id} THEN s.user_usec + s.sys_usec END),
-                0
-            ) AS total_cpu_usec,
-            MAX(
-                CAST(
-                    SUBSTRING_INDEX(
-                        SUBSTRING_INDEX(CONCAT(',', s.tres_usage_in_max), ',2=', -1),
-                        ',', 1
-                    ) AS UNSIGNED
-                )
-            ) AS max_mem_bytes
-        FROM create_job_table j
-        JOIN create_assoc_table a ON j.id_assoc = a.id_assoc
-        LEFT JOIN create_step_table s ON j.job_db_inx = s.job_db_inx
-        WHERE j.time_submit >= %s
-          AND j.time_submit < %s
-          AND j.time_start > 0
-          AND j.time_end > 0
-          AND j.time_end >= j.time_start
-        GROUP BY j.job_db_inx
-    """
-    cursor.execute(query, (since_ts, until_ts))
-    return cursor
-
-
-# =============================================================================
 # Job Processing
 # =============================================================================
 
-def process_job(row, stats, collate_key, is_success):
-    """Process a single job and update stats dictionary."""
-    (job_db_inx, id_job, username, state, exit_code,
-     time_submit, time_start, time_end, alloc_cpus, tres_req,
-     timelimit, nodes_alloc, total_user_sec, total_sys_sec,
-     total_cpu_usec, max_mem_bytes) = row
-
-    # Convert types
-    time_submit = float(time_submit) if time_submit else 0
-    time_start = float(time_start) if time_start else 0
-    time_end = float(time_end) if time_end else 0
-    total_user_sec = float(total_user_sec) if total_user_sec else 0
-    total_sys_sec = float(total_sys_sec) if total_sys_sec else 0
-    total_cpu_usec = float(total_cpu_usec) if total_cpu_usec else 0
-    nodes_alloc = int(nodes_alloc) if nodes_alloc else 0
-    alloc_cpus = alloc_cpus or 0
-    timelimit = timelimit or 0
-
-    # Derived values
-    elapsed = time_end - time_start if time_end and time_start else 0
-    wait_time = time_start - time_submit if time_start and time_submit else 0
-    total_cpu = total_user_sec + total_sys_sec + (total_cpu_usec / 1_000_000)
-    timelimit_sec = timelimit * 60
-
-    # Memory values
-    maxrss = int(max_mem_bytes) if max_mem_bytes else 0
-    reqmem_mb = parse_tres_value(tres_req, TRES_MEM_ID)
-    reqmem = reqmem_mb * 1024 * 1024
-
-    # Per-job efficiencies
-    cpu_allocated = elapsed * alloc_cpus
-    cpu_eff = (total_cpu / cpu_allocated * 100) if cpu_allocated > 0 else None
-    mem_eff = (maxrss / reqmem * 100) if reqmem > 0 else None
-    time_eff = (elapsed / timelimit_sec * 100) if timelimit_sec > 0 else None
-
-    # Update stats
+def update_stats(metrics, stats, collate_key):
+    """Update stats dictionary with job metrics."""
     s = stats[collate_key]
+    is_success = metrics["is_success"]
+
     s["job_count"] += 1
     s["job_count_success" if is_success else "job_count_failed"] += 1
-    state_name = STATE_NAMES.get(state)
+    state_name = STATE_NAMES.get(metrics["state"])
     if state_name:
         s["count_by_state"][state_name] += 1
 
-    ec = exit_code or 0
+    ec = metrics["exit_code"]
     s["exit_codes"][ec] = s["exit_codes"].get(ec, 0) + 1
 
-    s["total_elapsed"] += elapsed
-    s["total_cpu"] += total_cpu
-    s["total_user_cpu"] += total_user_sec
-    s["total_sys_cpu"] += total_sys_sec
-    s["total_maxrss"] += maxrss
-    s["total_reqmem"] += reqmem
-    s["total_alloccpus"] += alloc_cpus
-    s["total_timelimit"] += timelimit_sec
-    s["total_nodes"] += nodes_alloc
-    s["total_wait"] += wait_time
-    s["sum_cpu_allocated"] += cpu_allocated
+    s["total_elapsed"] += metrics["elapsed"]
+    s["total_cpu"] += metrics["total_cpu"]
+    s["total_user_cpu"] += metrics["total_user"]
+    s["total_sys_cpu"] += metrics["total_sys"]
+    s["total_maxrss"] += metrics["maxrss"]
+    s["total_reqmem"] += metrics["reqmem"]
+    s["total_reqcpus"] += metrics["req_cpus"]
+    s["total_timelimit"] += metrics["timelimit_sec"]
+    s["total_nodes"] += metrics["nodes_alloc"]
+    s["total_wait"] += metrics["wait_time"]
+    s["sum_cpu_requested"] += metrics["cpu_requested"]
+
+    cpu_eff = metrics["cpu_eff"]
+    mem_eff = metrics["mem_eff"]
+    time_eff = metrics["time_eff"]
 
     if cpu_eff is not None:
         s["sum_job_cpu_eff"] += cpu_eff
@@ -236,12 +136,12 @@ def process_job(row, stats, collate_key, is_success):
         s["count_time_eff"] += 1
 
     if is_success:
-        s["success_total_elapsed"] += elapsed
-        s["success_total_cpu"] += total_cpu
-        s["success_total_maxrss"] += maxrss
-        s["success_total_reqmem"] += reqmem
-        s["success_sum_cpu_allocated"] += cpu_allocated
-        s["success_total_timelimit"] += timelimit_sec
+        s["success_total_elapsed"] += metrics["elapsed"]
+        s["success_total_cpu"] += metrics["total_cpu"]
+        s["success_total_maxrss"] += metrics["maxrss"]
+        s["success_total_reqmem"] += metrics["reqmem"]
+        s["success_sum_cpu_requested"] += metrics["cpu_requested"]
+        s["success_total_timelimit"] += metrics["timelimit_sec"]
         if cpu_eff is not None:
             s["success_sum_job_cpu_eff"] += cpu_eff
             s["success_count_cpu_eff"] += 1
@@ -256,7 +156,7 @@ def process_job(row, stats, collate_key, is_success):
 def calculate_final_efficiencies(s):
     """Calculate final weighted and average efficiencies."""
     # All jobs
-    s["weighted_cpu_eff"] = (s["total_cpu"] / s["sum_cpu_allocated"] * 100) if s["sum_cpu_allocated"] > 0 else None
+    s["weighted_cpu_eff"] = (s["total_cpu"] / s["sum_cpu_requested"] * 100) if s["sum_cpu_requested"] > 0 else None
     s["weighted_mem_eff"] = (s["total_maxrss"] / s["total_reqmem"] * 100) if s["total_reqmem"] > 0 else None
     s["weighted_time_eff"] = (s["total_elapsed"] / s["total_timelimit"] * 100) if s["total_timelimit"] > 0 else None
     s["avg_cpu_eff"] = (s["sum_job_cpu_eff"] / s["count_cpu_eff"]) if s["count_cpu_eff"] > 0 else None
@@ -267,7 +167,7 @@ def calculate_final_efficiencies(s):
     # Additional averages
     s["avg_elapsed"] = (s["total_elapsed"] / s["job_count"]) if s["job_count"] > 0 else None
     s["avg_cpu"] = (s["total_cpu"] / s["job_count"]) if s["job_count"] > 0 else None
-    s["avg_alloccpus"] = (s["total_alloccpus"] / s["job_count"]) if s["job_count"] > 0 else None
+    s["avg_reqcpus"] = (s["total_reqcpus"] / s["job_count"]) if s["job_count"] > 0 else None
     s["avg_reqmem"] = (s["total_reqmem"] / s["job_count"]) if s["job_count"] > 0 else None
     s["avg_maxrss"] = (s["total_maxrss"] / s["job_count"]) if s["job_count"] > 0 else None
 
@@ -277,7 +177,7 @@ def calculate_final_efficiencies(s):
     s["sys_cpu_pct"] = (s["total_sys_cpu"] / total_cpu_time * 100) if total_cpu_time > 0 else None
 
     # Successful jobs only
-    s["success_weighted_cpu_eff"] = (s["success_total_cpu"] / s["success_sum_cpu_allocated"] * 100) if s["success_sum_cpu_allocated"] > 0 else None
+    s["success_weighted_cpu_eff"] = (s["success_total_cpu"] / s["success_sum_cpu_requested"] * 100) if s["success_sum_cpu_requested"] > 0 else None
     s["success_weighted_mem_eff"] = (s["success_total_maxrss"] / s["success_total_reqmem"] * 100) if s["success_total_reqmem"] > 0 else None
     s["success_weighted_time_eff"] = (s["success_total_elapsed"] / s["success_total_timelimit"] * 100) if s["success_total_timelimit"] > 0 else None
     s["success_avg_cpu_eff"] = (s["success_sum_job_cpu_eff"] / s["success_count_cpu_eff"]) if s["success_count_cpu_eff"] > 0 else None
@@ -301,7 +201,7 @@ def output_csv(stats, collate_label, outfile=None, include_header=True):
         "total_user_cpu_sec", "total_sys_cpu_sec", "user_cpu_pct", "sys_cpu_pct",
         "total_maxrss_bytes", "avg_maxrss_bytes",
         "total_reqmem_bytes", "avg_reqmem_bytes",
-        "total_alloccpus", "avg_alloccpus",
+        "total_reqcpus", "avg_reqcpus",
         "total_nodes",
         "total_wait_sec", "avg_wait_sec",
         "weighted_cpu_eff_pct", "avg_cpu_eff_pct",
@@ -342,8 +242,8 @@ def output_csv(stats, collate_label, outfile=None, include_header=True):
             format_value(s["avg_maxrss"]),
             format_value(s["total_reqmem"]),
             format_value(s["avg_reqmem"]),
-            format_value(s["total_alloccpus"]),
-            format_value(s["avg_alloccpus"]),
+            format_value(s["total_reqcpus"]),
+            format_value(s["avg_reqcpus"]),
             format_value(s["total_nodes"]),
             format_value(s["total_wait"]),
             format_value(s["avg_wait"]),
@@ -422,13 +322,13 @@ def main():
 
     for row in fetch_job_data(cursor, since_ts, until_ts, special_steps):
         job_count += 1
-        state = row[3]
-        username = row[2]
+        state = row[3]  # state is at index 3 (after job_db_inx, id_job, user)
 
         if state not in FINISHED_STATES:
             continue
 
-        is_success = state in SUCCESS_STATES
+        metrics = calculate_job_metrics(row)
+        username = metrics["username"]
 
         # Process for each collate_by attribute
         if collate_by_keys and ldap_client and ad_config:
@@ -436,13 +336,13 @@ def main():
                 value = get_user_attribute(ldap_client, ad_config, username, attr, user_cache, ldap_errors)
                 if value not in stats_by_attr[attr]:
                     stats_by_attr[attr][value] = init_stats_dict()
-                process_job(row, stats_by_attr[attr], value, is_success)
+                update_stats(metrics, stats_by_attr[attr], value)
 
         # Process for global stats
         if use_global:
             if "all" not in global_stats:
                 global_stats["all"] = init_stats_dict()
-            process_job(row, global_stats, "all", is_success)
+            update_stats(metrics, global_stats, "all")
 
     cursor.close()
     conn.close()
