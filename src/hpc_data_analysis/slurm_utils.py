@@ -34,11 +34,13 @@ JOB_STATE_FAILED = 5
 JOB_STATE_TIMEOUT = 6
 JOB_STATE_NODE_FAIL = 7
 JOB_STATE_PREEMPTED = 8
+JOB_STATE_OUT_OF_MEMORY = 11
 
-# States considered "finished" (job ran and ended)
-FINISHED_STATES = {
-    JOB_STATE_COMPLETED, JOB_STATE_FAILED, JOB_STATE_TIMEOUT,
-    JOB_STATE_CANCELLED, JOB_STATE_NODE_FAIL, JOB_STATE_PREEMPTED
+# States included in efficiency analysis (jobs that ran and have meaningful resource usage)
+INCLUDED_STATES = {
+    JOB_STATE_COMPLETED,    # Job finished normally
+    JOB_STATE_TIMEOUT,      # Job ran until time limit
+    JOB_STATE_OUT_OF_MEMORY # Job killed for exceeding memory (shows under-requesting)
 }
 
 # States considered "successful"
@@ -52,6 +54,7 @@ STATE_NAMES = {
     JOB_STATE_TIMEOUT: "timeout",
     JOB_STATE_NODE_FAIL: "node_fail",
     JOB_STATE_PREEMPTED: "preempted",
+    JOB_STATE_OUT_OF_MEMORY: "out_of_memory",
 }
 
 
@@ -245,9 +248,6 @@ def fetch_job_data(cursor, since_ts, until_ts, special_steps):
         LEFT JOIN create_step_table s ON j.job_db_inx = s.job_db_inx
         WHERE j.time_submit >= %s
           AND j.time_submit < %s
-          AND j.time_start > 0
-          AND j.time_end > 0
-          AND j.time_end >= j.time_start
         GROUP BY j.job_db_inx
     """
     cursor.execute(query, (since_ts, until_ts))

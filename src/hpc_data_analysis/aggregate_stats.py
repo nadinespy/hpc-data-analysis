@@ -20,7 +20,7 @@ from hpc_data_analysis.slurm_utils import (
     fetch_job_data, calculate_job_metrics,
     LdapClient, load_ad_config, get_user_attribute,
     parse_date_range, format_value,
-    FINISHED_STATES, SUCCESS_STATES, STATE_NAMES,
+    INCLUDED_STATES, SUCCESS_STATES, STATE_NAMES,
 )
 
 
@@ -324,7 +324,7 @@ def main():
         job_count += 1
         state = row[3]  # state is at index 3 (after job_db_inx, id_job, user)
 
-        if state not in FINISHED_STATES:
+        if state not in INCLUDED_STATES:
             continue
 
         metrics = calculate_job_metrics(row)
