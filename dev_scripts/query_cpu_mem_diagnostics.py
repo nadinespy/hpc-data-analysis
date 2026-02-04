@@ -266,7 +266,7 @@ with open(OUTPUT_FILE, 'w') as f:
     try:
         cur.execute("""
             SELECT
-                CASE WHEN mem_req & 0x800000000000000000000000 != 0 THEN 'per-cpu (flag set)'
+                CASE WHEN mem_req & 0x8000000000000000 != 0 THEN 'per-cpu (flag set)'
                      ELSE 'per-node (no flag)' END as mem_type,
                 COUNT(*) as cnt
             FROM create_job_table
