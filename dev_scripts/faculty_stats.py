@@ -33,7 +33,7 @@ import yaml
 import sys
 
 # Paths relative to script location (allows running from any directory)
-SCRIPT_DIR = Path(__file__).parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 CONFIG_FILE = PROJECT_ROOT / "config.yaml"
 OUTPUT_DIR = SCRIPT_DIR / "output"
