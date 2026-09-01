@@ -22,6 +22,8 @@ Memory values in MB never come near needing all 64 bits, so the **top bit (bit 6
 
 The memory value itself always lives in the lower 63 bits. So reading `mem_req` is two steps: (a) test the top bit to learn the type, and (b) mask the top bit off to recover the value.
 
+> **Bits as place values:** a 64-bit integer is a sum of 64 positions, each *worth* a power of two — bit 0 is worth 2⁰ = 1, bit 1 is worth 2¹ = 2, … bit 63 is worth 2⁶³ ≈ 9.2 × 10¹⁸. Each bit is only 0 or 1, so it either adds its place value or nothing. A plain memory value like 4096 sets just bit 12 (2¹² = 4096) and leaves every higher bit at 0 — which is exactly why the unused top bit can be borrowed as a flag without ever clashing with a real value.
+
 ```python
 # (a) Which mode? Test bit 63.
 is_per_cpu = (mem_req & 0x8000000000000000) != 0
@@ -30,7 +32,7 @@ is_per_cpu = (mem_req & 0x8000000000000000) != 0
 mem_value_mb = mem_req & 0x7FFFFFFFFFFFFFFF
 ```
 
-Concretely, `--mem-per-cpu=4096` is stored as `2^63 + 4096` = `9223372036854779904`; masking off bit 63 gives back `4096`.
+Concretely, `--mem-per-cpu=4096` is stored as `9223372036854779904`. That is not a different, larger memory amount — it is the *same* `4096` with bit 63 switched on to flag the mode: `2⁶³ (the flag) + 4096 (the value)` = `9223372036854775808 + 4096` = `9223372036854779904`. Masking bit 63 back off subtracts the flag and returns `4096`.
 
 | mem_req (decimal) | mem_req (hex) | Type | Value (lower 63 bits) |
 |-------------------|---------------|------|-----------------------|
@@ -52,23 +54,19 @@ In practice the analysis avoids this decoding entirely by reading **`tres_req` (
 ### Conversion for Efficiency Calculation
 
 ```python
-# Requested memory (from tres_req, in MB)
-reqmem_mb = parse_tres_value(tres_req, 2)
-reqmem_bytes = reqmem_mb * 1024 * 1024
-
-# Used memory (from tres_usage_in_max, already in bytes)
-maxrss_bytes = parse_tres_value(tres_usage_in_max, 2)
-
-# Memory efficiency
-mem_eff = (maxrss_bytes / reqmem_bytes) * 100
+# tres_req is MB; tres_usage_in_max is bytes — convert before comparing
+reqmem_bytes = parse_tres_value(tres_req, 2) * 1024 * 1024
+maxrss_bytes = parse_tres_value(tres_usage_in_max, 2)   # already bytes
 ```
+
+The efficiency formula that consumes these two values (`maxrss_bytes / reqmem_bytes`) is an analysis concern — see [Efficiency Metrics](../analysis/efficiency_metrics.md).
 
 ## Memory Usage Tracking
 
 Memory usage is tracked per step in `tres_usage_in_max`:
 
 - TRES ID 2 = memory in bytes
-- Value represents peak RSS (Resident Set Size)
+- Value represents peak RSS (Resident Set Size) — the most physical RAM the process held at any single instant during the step
 - Take MAX across all steps for job-level peak memory
 
 ```sql

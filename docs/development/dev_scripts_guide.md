@@ -19,26 +19,18 @@ Grouped roughly from "map the database" to "validate the pipeline":
 | `query_step_diagnostics.py` | Step structure and CPU distribution across steps (incl. multi-node) | `output_step_diagnostics.txt` |
 | `query_tres_usage_vs_rusage.py` | Compares rusage vs TRES CPU accounting | `output_tres_usage_vs_rusage.txt` |
 | `query_submit_line.py` | Submission type + `--ntasks`/`--cpus-per-task` parsed from `submit_line` | `output_submit_line.txt` |
-| `query_sacct_steps.py` | Cross-checks the DB step aggregation against `sacct` (needs cluster + `sacct`) | `output_sacct_steps.txt` |
-| `verify_sacct_mysql_compatibility.py` | Verifies the MySQL pipeline reproduces `sacct` values | `output_verify_sacct_mysql_compatibility.txt` |
+| `query_sacct_steps.py` | **Investigates** how `sacct` structures its data — job-level vs step-level, and how the batch/srun/extern step patterns map onto the MySQL step table. Exploratory; needs cluster + `sacct` | `output_sacct_steps.txt` |
+| `verify_sacct_mysql_compatibility.py` | **Validates** the final numbers: compares our pipeline's per-job output CSV against a manual `sacct` export, field by field (Elapsed, TotalCPU, AllocCPUs, ReqMem, MaxRSS) | `output_verify_sacct_mysql_compatibility.txt` |
 | `faculty_stats.py` | Legacy faculty statistics (use the CLI tools instead) | `output_faculty_stats.csv` |
 
 Most outputs are committed as a record of what was found; a few (`query_cpu_time.py`, `query_memory.py`, `faculty_stats.py`) are re-runnable but not checked in.
 
 ## Running Scripts
 
-All scripts can be run from any directory - they resolve paths relative to their own location:
+Scripts can be run from any directory — they resolve paths relative to their own location (`Path(__file__).resolve()`), so `config.yaml`, the output folder, and any data files are found regardless of your working directory:
 
 ```bash
-# From project root
-python3 dev_scripts/query_cpu_mem_diagnostics.py
-
-# From dev_scripts directory
-cd dev_scripts
 python3 query_cpu_mem_diagnostics.py
-
-# From anywhere
-python3 /path/to/hpc-data-analysis/dev_scripts/query_cpu_mem_diagnostics.py
 ```
 
 Scripts require:
@@ -117,7 +109,7 @@ When creating new investigative scripts:
 2. Add comprehensive docstring explaining purpose and findings
 3. Use path resolution pattern for config:
    ```python
-   SCRIPT_DIR = Path(__file__).parent
+   SCRIPT_DIR = Path(__file__).resolve().parent   # .resolve() so it works from any cwd
    PROJECT_ROOT = SCRIPT_DIR.parent
    CONFIG_FILE = PROJECT_ROOT / "config.yaml"
    OUTPUT_DIR = SCRIPT_DIR / "output"

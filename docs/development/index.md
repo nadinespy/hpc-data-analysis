@@ -10,6 +10,7 @@ This documentation is for developers working on the hpc-data-analysis codebase. 
 4. [Memory Accounting](memory_accounting.md) - Units, --mem vs --mem-per-cpu encoding
 5. [Job States and Flags](job_states_and_flags.md) - State codes, flag bitmasks
 6. [TRES Encoding](tres_encoding.md) - TRES string format and common IDs
+7. [Code Improvements](code_improvements.md) - Performance, correctness, testing, and workflow TODOs
 
 ## Recommended Reading Order
 
@@ -27,8 +28,6 @@ The hard-won database and coding gotchas from reverse-engineering the accounting
 - **Memory unit mismatch**: `tres_req` stores memory in **MB**, but `tres_usage_in_max` stores it in **bytes**. The efficiency calculation must convert (× 1024²), or it is wrong by a factor of ~1,000,000. See [Memory Accounting](memory_accounting.md).
 
 - **`mem_req` packs a flag into bit 63**: the top bit of the 64-bit `mem_req` marks `--mem-per-cpu` (set) vs `--mem`/per-node (unset); the memory value is in the lower 63 bits. Prefer `tres_req` (TRES ID 2), which already stores the *total* memory and needs no decoding. See [Memory Accounting](memory_accounting.md).
-
-- **Numeric MAX, not string MAX, for memory**: `tres_usage_in_max` is a string, so a plain SQL `MAX()` compares lexicographically and can pick the wrong step's value. The peak must be extracted numerically inside the query (`SUBSTRING_INDEX` + `CAST`). See [TRES Encoding](tres_encoding.md).
 
 - **CPU-time step aggregation**: sum the regular srun steps and fall back to the batch step only when there are no regular steps (never add both), to avoid double-counting. What the batch step's CPU represents in large multi-step jobs, and how multi-node jobs should be summed, is not fully settled — see [open_questions.md](../analysis/open_questions.md) #4, #5 and [CPU Accounting](cpu_accounting.md).
 

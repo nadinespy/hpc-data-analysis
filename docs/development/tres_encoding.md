@@ -17,7 +17,7 @@ This means:
 
 ## Common TRES IDs
 
-| ID | Type | Unit (tres_req) | Unit (tres_usage) | Notes |
+| ID | Type | Unit (tres_req) | Unit (tres_usage_in_max) | Notes |
 |----|------|-----------------|-------------------|-------|
 | 1 | cpu | count | CPU-**milliseconds** | request = CPU count; usage = CPU time in ms (see [CPU Accounting](cpu_accounting.md)) |
 | 2 | mem | MB | **bytes** | unit differs between request and usage — see [Memory Accounting](memory_accounting.md) |
@@ -75,7 +75,7 @@ CAST(
         SUBSTRING_INDEX(CONCAT(',', tres_usage_in_max), ',2=', -1),
         ',', 1
     ) AS UNSIGNED
-) AS memory_value
+) AS max_mem_bytes
 ```
 
 How it works:

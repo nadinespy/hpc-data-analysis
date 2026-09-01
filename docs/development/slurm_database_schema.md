@@ -100,8 +100,12 @@ Defines TRES (Trackable RESources) types.
 
 ## Relationships
 
+**Primary key (PK)** — the column that uniquely identifies each row in its own table; no two rows share the same value (e.g. `create_assoc_table.id_assoc`, `create_job_table.job_db_inx`).
+
+**Foreign key (FK)** — a column in another table that stores a PK value in order to point back at that row. It is *not* unique in its own table: many jobs can carry the same `id_assoc` (FK) pointing to one association (PK), and many steps can carry the same `job_db_inx` (FK) pointing to one job. In the diagram, `FK -> PK` labels that pointing direction.
+
 ```text
-                           +--------------------+
+                            +--------------------+
           id_assoc  ------> | create_assoc_table |   resolve a job to its user
          (who ran it)       |  id_assoc (PK)     |   (LDAP then maps user ->
                             |  user, acct        |    faculty)
@@ -110,7 +114,7 @@ Defines TRES (Trackable RESources) types.
                                       | id_assoc  (FK -> PK)
                                       |
     +----------------------+   job_db_inx      +-----------------------+
-    | create_job_table     | ---------------> | create_step_table     |
+    | create_job_table     | --------------->  | create_step_table     |
     |  job_db_inx (PK)     |  one job ->       |  job_db_inx (FK)      |
     |  id_job (Slurm ID)   |  many steps       |  id_step (-5/-6/>=0)  |
     |  id_assoc (FK)       |                   |  user_sec, sys_sec    |
@@ -131,7 +135,7 @@ Defines TRES (Trackable RESources) types.
 
 - **`create_job_table.id_assoc` -> `create_assoc_table.id_assoc`**: resolves a job to a username (LDAP then maps username -> faculty).
 - **`create_step_table.job_db_inx` -> `create_job_table.job_db_inx`**: one job links to one or more steps.
-- **`tres_table`**: a lookup for the numeric IDs used inside every TRES string (`tres_req`, `tres_alloc`, `tres_usage_in_max`). Slurm does not declare these as foreign keys — the links are by convention, maintained by Slurm's own code, not enforced by the database.
+- **`tres_table`**: a lookup for the numeric IDs used inside every TRES string (`tres_req`, `tres_alloc`, `tres_usage_in_max`). Slurm does not declare these as foreign keys — the links are by convention, maintained by Slurm's own code, not enforced by the database. You can confirm this by running `SHOW CREATE TABLE create_job_table`: the output lists the columns and indexes but contains no `CONSTRAINT ... FOREIGN KEY ... REFERENCES ...` clauses, which is what an enforced FK would look like.
 
 ## Example Query
 
