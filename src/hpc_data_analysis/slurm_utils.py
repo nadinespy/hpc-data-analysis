@@ -27,6 +27,12 @@ TRES_CPU_ID = 1
 TRES_MEM_ID = 2
 TRES_ENERGY_ID = 3
 
+# mem_req packs a flag into bit 63: set = --mem-per-cpu, unset = --mem (per-node).
+# The memory value lives in the lower 63 bits, but the pipeline reads the total memory
+# from tres_req instead, so only the flag is needed here.
+# See docs/development/memory_accounting.md.
+MEM_PER_CPU_FLAG = 0x8000000000000000  # bit 63
+
 # Slurm job states (numeric codes)
 # See: https://slurm.schedmd.com/squeue.html#SECTION_JOB-STATE-CODES
 JOB_STATE_COMPLETED = 3
@@ -250,16 +256,21 @@ def fetch_job_data(cursor, since_ts, until_ts, special_steps):
          mem_req, total_user_sec, total_sys_sec, total_user_usec, total_sys_usec,
          max_mem_bytes, submission_type, step_count, n_tasks, submit_line)
     """
-    # Build exclusion list from all discovered special steps
+    # Build exclusion list from all discovered special steps.
+    # NB: exclude_ids, batch_id and interactive_id are interpolated into the query
+    # string below with f-strings (unlike the date bounds, which use %s placeholders).
+    # This is safe from SQL injection because they are integer id_step values produced
+    # by discover_special_steps() from the database itself, never from user input.
     exclude_ids = ", ".join(str(sid) for sid in special_steps.values())
     if "batch" not in special_steps:
         sys.exit("ERROR: discover_special_steps() did not find a 'batch' step. "
                  "Cannot proceed without knowing the batch step ID.")
-    if "interactive" not in special_steps:
-        sys.exit("ERROR: discover_special_steps() did not find an 'interactive' step. "
-                 "Cannot proceed without knowing the interactive step ID.")
     batch_id = special_steps["batch"]
-    interactive_id = special_steps["interactive"]
+    # The interactive step (id_step = -6) is essentially never created on CREATE, and
+    # interactive detection uses submit_line (--pty), not this step — so it is optional.
+    # The sentinel matches no real id_step (-6/-5/-4/>=0), so the interactive CASE
+    # branches below simply never fire when there is no interactive step.
+    interactive_id = special_steps.get("interactive", -999)
 
     query = f"""
         SELECT
@@ -397,7 +408,7 @@ def calculate_job_metrics(row):
 
     # Memory request type (bit 63 of mem_req encodes --mem-per-cpu)
     mem_req_raw_int = int(mem_req_raw) if mem_req_raw else 0
-    mem_type = 'per-cpu' if (mem_req_raw_int & 0x8000000000000000) else 'per-node'
+    mem_type = 'per-cpu' if (mem_req_raw_int & MEM_PER_CPU_FLAG) else 'per-node'
 
     # Per-job efficiencies
     cpu_requested = elapsed * req_cpus

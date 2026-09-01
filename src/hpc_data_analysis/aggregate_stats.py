@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import csv
 import os
 import re
 import sys
@@ -234,12 +235,13 @@ def output_csv(stats, collate_label, outfile=None, include_header=True):
     ]
 
     out = outfile if outfile else sys.stdout
+    writer = csv.writer(out, lineterminator="\n")
     if include_header:
-        print(",".join(headers), file=out)
+        writer.writerow(headers)
 
     for key, s in sorted(stats.items(), key=lambda x: -x[1]["job_count"]):
         row = [
-            f'"{key}"',
+            key,
             # Job counts
             format_value(s["job_count"]),
             format_value(s["job_count_success"]),
@@ -280,7 +282,7 @@ def output_csv(stats, collate_label, outfile=None, include_header=True):
             format_value(s["weighted_time_eff"]),
             format_value(s["avg_time_eff"]),
         ]
-        print(",".join(row), file=out)
+        writer.writerow(row)
 
 
 # =============================================================================

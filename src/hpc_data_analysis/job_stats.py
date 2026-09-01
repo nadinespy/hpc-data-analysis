@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import csv
 import os
 import sys
 
@@ -23,7 +24,7 @@ from hpc_data_analysis.slurm_utils import (
 )
 
 
-def write_csv_header(outfile, include_faculty=False):
+def write_csv_header(writer, include_faculty=False):
     """Write CSV header row."""
     headers = [
         "job_id", "username"
@@ -40,17 +41,17 @@ def write_csv_header(outfile, include_faculty=False):
         "req_cpus", "alloc_cpus", "n_nodes", "n_tasks",
         "submit_line_ntasks", "submit_line_cpus_per_task", "submit_line_interactive"
     ])
-    print(",".join(headers), file=outfile)
+    writer.writerow(headers)
 
 
-def write_csv_row(job, outfile, include_faculty=False):
+def write_csv_row(job, writer, include_faculty=False):
     """Write a single job as a CSV row."""
     row = [
         str(job["id_job"]),
         job["username"],
     ]
     if include_faculty:
-        row.append(f'"{job.get("faculty", "unknown")}"')
+        row.append(job.get("faculty", "unknown"))
     row.extend([
         job.get("submission_type", "unknown"),
         str(job.get("step_count", 0)),
@@ -81,7 +82,7 @@ def write_csv_row(job, outfile, include_faculty=False):
         format_value(job.get("submit_line_cpus_per_task")),
         "1" if job.get("submit_line_interactive") else "0",
     ])
-    print(",".join(row), file=outfile)
+    writer.writerow(row)
 
 
 def main():
@@ -129,7 +130,8 @@ def main():
 
     with open(output_path, 'w') as f:
         print(f"# date_range: {args.since} to {args.until}", file=f)
-        write_csv_header(f, include_faculty=args.include_faculty)
+        writer = csv.writer(f, lineterminator="\n")
+        write_csv_header(writer, include_faculty=args.include_faculty)
 
         for row in fetch_job_data(cursor, since_ts, until_ts, special_steps):
             job_count += 1
@@ -148,7 +150,7 @@ def main():
                 )
                 job["faculty"] = faculty
 
-            write_csv_row(job, f, include_faculty=args.include_faculty)
+            write_csv_row(job, writer, include_faculty=args.include_faculty)
             included_count += 1
 
     cursor.close()
