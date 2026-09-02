@@ -2,6 +2,19 @@
 
 Analyses HPC cluster usage by faculty, with a focus on resource efficiency (CPU, memory, time). Queries the Slurm accounting database (MySQL) directly and maps users to faculties via LDAP.
 
+> **About this repository**
+>
+> I am the sole developer of this project: I wrote all of the code and shaped the
+> analytical approach myself, working in regular consultation with stakeholders in
+> the **e-Research team at King's College London** (soon to be renamed **Advanced
+> Research Computing**), who guided the direction, priorities, and focus of the work.
+>
+> This is my personal copy, kept as a snapshot of the work as of **September 2026**.
+> The actively maintained version lives at
+> [kcl-eresearch/hpc-data-analysis](https://github.com/kcl-eresearch/hpc-data-analysis),
+> where the team continues development after my handover. Released under the MIT
+> License (see [LICENSE](LICENSE)).
+
 ## Structure
 
 ```
