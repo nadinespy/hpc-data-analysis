@@ -1,4 +1,4 @@
-# HPC Data Analysis
+# HPC Data Analysis - Green Computing Through Resource Efficiency
 
 Analyses HPC cluster usage by faculty, with a focus on resource efficiency (CPU, memory, time). Queries the Slurm accounting database (MySQL) directly and maps users to faculties via LDAP.
 
